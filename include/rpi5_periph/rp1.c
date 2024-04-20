@@ -1,40 +1,47 @@
 #include "rp1.h"
-#include "devmem.h"
 
-rp1_t rp1_init(void)
+#include <unistd.h>
+#include <fcntl.h> 
+#include <sys/mman.h> 
+
+
+int rp1_init(rp1_t* rp1)
 {
-    rp1_t rp1;
-    int fd = devmem_map(RP1_BASE, RP1_SPAN, &rp1.base_ptr);
-    if (fd >= 0) {
-        rp1.devmem_fd = fd;
-        rp1.gpio_io_bank0 = (rp1_gpio_io_bank_t*) RP1_GET_ADDR(rp1, RP1_GPIO_IO_BANK0_BASE);
-        rp1.gpio_pads_bank0 = (rp1_gpio_pads_bank_t*) RP1_GET_ADDR(rp1, RP1_GPIO_PADS_BANK0_BASE);
-        rp1.sys_rio0 = (rp1_sys_rio_t*) RP1_GET_ADDR(rp1, RP1_SYS_RIO0_BASE);
-        rp1.sys_rio0_xor = (rp1_sys_rio_t*) RP1_GET_ADDR(rp1, RP1_SYS_RIO0_BASE + RP1_SYS_RIO0_XOR_OFFSET);
-        rp1.sys_rio0_set = (rp1_sys_rio_t*) RP1_GET_ADDR(rp1, RP1_SYS_RIO0_BASE + RP1_SYS_RIO0_SET_OFFSET);
-        rp1.sys_rio0_clr = (rp1_sys_rio_t*) RP1_GET_ADDR(rp1, RP1_SYS_RIO0_BASE + RP1_SYS_RIO0_CLR_OFFSET);
-        rp1.pwm0 = (rp1_pwm_t*) RP1_GET_ADDR(rp1, RP1_PWM0_BASE);
-        rp1.pwm1 = (rp1_pwm_t*) RP1_GET_ADDR(rp1, RP1_PWM1_BASE);
-        rp1.spi0 = (rp1_spi_t*) RP1_GET_ADDR(rp1, RP1_SPI0_BASE);
-        rp1.spi1 = (rp1_spi_t*) RP1_GET_ADDR(rp1, RP1_SPI1_BASE);
-        rp1.spi2 = (rp1_spi_t*) RP1_GET_ADDR(rp1, RP1_SPI2_BASE);
-        rp1.spi3 = (rp1_spi_t*) RP1_GET_ADDR(rp1, RP1_SPI3_BASE);
-        rp1.spi4 = (rp1_spi_t*) RP1_GET_ADDR(rp1, RP1_SPI4_BASE);
-        rp1.spi5 = (rp1_spi_t*) RP1_GET_ADDR(rp1, RP1_SPI5_BASE);
-        rp1.spi6 = (rp1_spi_t*) RP1_GET_ADDR(rp1, RP1_SPI6_BASE);
-        rp1.spi7 = (rp1_spi_t*) RP1_GET_ADDR(rp1, RP1_SPI7_BASE);
-        rp1.spi8 = (rp1_spi_t*) RP1_GET_ADDR(rp1, RP1_SPI8_BASE);
+    int fd = open("/dev/mem", O_RDWR | O_SYNC);
+    rp1->base_ptr = (void*) mmap(NULL, RP1_SPAN, PROT_READ | PROT_WRITE, MAP_SHARED, fd, RP1_BASE);
+
+    if (rp1->base_ptr != MAP_FAILED) {
+        rp1->devmem_fd = fd;
+        rp1->gpio_io_bank0 = (rp1_gpio_io_bank_t*) RP1_GET_ADDR(rp1, RP1_GPIO_IO_BANK0_BASE);
+        rp1->gpio_pads_bank0 = (rp1_gpio_pads_bank_t*) RP1_GET_ADDR(rp1, RP1_GPIO_PADS_BANK0_BASE);
+        rp1->sys_rio0 = (rp1_sys_rio_t*) RP1_GET_ADDR(rp1, RP1_SYS_RIO0_BASE);
+        rp1->sys_rio0_xor = (rp1_sys_rio_t*) RP1_GET_ADDR(rp1, RP1_SYS_RIO0_BASE + RP1_SYS_RIO0_XOR_OFFSET);
+        rp1->sys_rio0_set = (rp1_sys_rio_t*) RP1_GET_ADDR(rp1, RP1_SYS_RIO0_BASE + RP1_SYS_RIO0_SET_OFFSET);
+        rp1->sys_rio0_clr = (rp1_sys_rio_t*) RP1_GET_ADDR(rp1, RP1_SYS_RIO0_BASE + RP1_SYS_RIO0_CLR_OFFSET);
+        rp1->pwm0 = (rp1_pwm_t*) RP1_GET_ADDR(rp1, RP1_PWM0_BASE);
+        rp1->pwm1 = (rp1_pwm_t*) RP1_GET_ADDR(rp1, RP1_PWM1_BASE);
+        rp1->spi0 = (rp1_spi_t*) RP1_GET_ADDR(rp1, RP1_SPI0_BASE);
+        rp1->spi1 = (rp1_spi_t*) RP1_GET_ADDR(rp1, RP1_SPI1_BASE);
+        rp1->spi2 = (rp1_spi_t*) RP1_GET_ADDR(rp1, RP1_SPI2_BASE);
+        rp1->spi3 = (rp1_spi_t*) RP1_GET_ADDR(rp1, RP1_SPI3_BASE);
+        rp1->spi4 = (rp1_spi_t*) RP1_GET_ADDR(rp1, RP1_SPI4_BASE);
+        rp1->spi5 = (rp1_spi_t*) RP1_GET_ADDR(rp1, RP1_SPI5_BASE);
+        rp1->spi6 = (rp1_spi_t*) RP1_GET_ADDR(rp1, RP1_SPI6_BASE);
+        rp1->spi7 = (rp1_spi_t*) RP1_GET_ADDR(rp1, RP1_SPI7_BASE);
+        rp1->spi8 = (rp1_spi_t*) RP1_GET_ADDR(rp1, RP1_SPI8_BASE);
     } else {
-        rp1.base_ptr = NULL;
-        rp1.devmem_fd = -1;
+        rp1->base_ptr = NULL;
+        rp1->devmem_fd = -1;
+        return 1;
     }
-    return rp1;
+    return 0;
 }
 
 void rp1_deinit(rp1_t* rp1)
 {
     if (rp1->base_ptr != NULL) {
-        devmem_unmap(rp1->devmem_fd, rp1->base_ptr, RP1_SPAN);
+        munmap(rp1->base_ptr, RP1_SPAN);
+        close(rp1->devmem_fd);
         rp1->base_ptr = NULL;
         rp1->devmem_fd= -1;
     }

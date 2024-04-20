@@ -12,7 +12,7 @@ static uint8_t reverse_bits(uint8_t byte)
     return res;
 }
 
-float max9939_set_gain(rp1_spi_instance_t* spi, float gain, bool shdn, bool meas)
+float max9939_set_gain(spi_handle_t* spi, float gain, bool shdn, bool meas)
 {
     uint8_t byte = shdn ? MAX9939_SHDN : 0x00;
     byte |= meas ? MAX9939_MEAS : 0x00;
@@ -29,12 +29,14 @@ float max9939_set_gain(rp1_spi_instance_t* spi, float gain, bool shdn, bool meas
     }
 
     byte |= max9939_gains_bytes[sel_i];
-    rp1_spi_write_8_blocking(spi, reverse_bits(byte));
+    byte = reverse_bits(byte);
+    spi_write(spi, &byte, 1);
+    spi_write(spi, &byte, 1);
 
     return max9939_gains_values[sel_i];
 }
 
-float max9939_set_offset(rp1_spi_instance_t* spi, float offset, bool shdn, bool meas)
+float max9939_set_offset(spi_handle_t* spi, float offset, bool shdn, bool meas)
 {
     uint8_t byte = shdn ? MAX9939_SHDN : 0x00;
     byte |= meas ? MAX9939_MEAS : 0x00;
@@ -51,7 +53,9 @@ float max9939_set_offset(rp1_spi_instance_t* spi, float offset, bool shdn, bool 
     }
 
     byte |= max9939_offsets_bytes[sel_i];
-    rp1_spi_write_8_blocking(spi, reverse_bits(byte));
+    byte = reverse_bits(byte);
+    spi_write(spi, &byte, 1);
+    spi_write(spi, &byte, 1);
 
     return max9939_offsets_values[sel_i];
 }

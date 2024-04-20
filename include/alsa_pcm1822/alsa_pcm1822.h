@@ -6,6 +6,9 @@
 #include <stdio.h>
 #include <alsa/asoundlib.h>
 
+#define NUM_CHANNELS 2
+#define PCM_FORMAT SND_PCM_FORMAT_S32_LE
+
 typedef struct {
     const char* dev_name;
     uint32_t sample_rate;
@@ -13,6 +16,7 @@ typedef struct {
     snd_pcm_t *capture_handle;
     snd_pcm_status_t* capture_status;
     int32_t* buffer;
+    uint32_t buffer_size;
     snd_htimestamp_t hstamp;
     snd_htimestamp_t hstamp_trigger;
     snd_htimestamp_t hstamp_audio;

@@ -11,6 +11,35 @@ rp1_spi_instance_t rp1_spi_init(rp1_spi_t* regbase)
     return spi;
 }
 
+void rp1_spi_set_freq(rp1_spi_instance_t* spi, uint32_t freq)
+{
+    spi->regbase->baudr = 200000000 / freq;
+}
+
+void rp1_spi_set_mode(rp1_spi_instance_t* spi, uint32_t mode)
+{
+    uint32_t reg_ctrlr0 = spi->regbase->ctrlr[0];
+    switch (mode) {
+        case 0: default:
+            reg_ctrlr0 &= ~DW_PSSI_CTRLR0_SCPHA;
+            reg_ctrlr0 &= ~DW_PSSI_CTRLR0_SCPOL;
+            break;
+        case 1:
+            reg_ctrlr0 |= DW_PSSI_CTRLR0_SCPHA;
+            reg_ctrlr0 &= ~DW_PSSI_CTRLR0_SCPOL;
+            break;
+        case 2:
+            reg_ctrlr0 &= ~DW_PSSI_CTRLR0_SCPHA;
+            reg_ctrlr0 |= DW_PSSI_CTRLR0_SCPOL;
+            break;
+        case 3:
+            reg_ctrlr0 |= DW_PSSI_CTRLR0_SCPHA;
+            reg_ctrlr0 |= DW_PSSI_CTRLR0_SCPOL;
+            break;
+    }
+    spi->regbase->ctrlr[0] = reg_ctrlr0;
+}
+
 
 /// @brief Writes 8 bits of data to the SPI bus, blocking until it can write and until the write is complete
 /// @param spi SPI instance
@@ -37,7 +66,7 @@ spi_status_t rp1_spi_write_8_blocking(rp1_spi_instance_t *spi, uint8_t data)
     (spi->regbase->ser) = 1 <<0;
 
     // put the data into the fifo
-    *(volatile uint8_t *)(spi->regbase->dr) = data;
+    *(volatile uint8_t *)(&spi->regbase->dr) = data;
 
     // we now need to pull exactly one byte out of the fifo which would
     // have been clocked in when we wrote the data    
@@ -46,7 +75,7 @@ spi_status_t rp1_spi_write_8_blocking(rp1_spi_instance_t *spi, uint8_t data)
     {
         ;
     }
-    /*uint8_t discard = */*(volatile uint8_t *)(spi->regbase->dr);
+    /*uint8_t discard = */*(volatile uint8_t *)(&spi->regbase->dr);
     //printf("write_8 - discarded: %d\n", discard);
 
     return SPI_OK;
@@ -83,7 +112,7 @@ spi_status_t rp1_spi_read_8_n_blocking(rp1_spi_instance_t *spi, uint8_t *data, u
     // pre-stuff the TX buffer with dummy data
     while(((spi->regbase->sr) & DW_SPI_SR_TF_NOT_FULL) && (spi->txcount > 0))
     {
-        *(volatile uint8_t *)(spi->regbase->dr) = (uint8_t)0x00;
+        *(volatile uint8_t *)(&spi->regbase->dr) = (uint8_t)0x00;
         spi->txcount--;
     }
     
@@ -96,12 +125,12 @@ spi_status_t rp1_spi_read_8_n_blocking(rp1_spi_instance_t *spi, uint8_t *data, u
     // keep loading data into the tx fifo and also see if we have anything to read in the rx fifo
     while(((spi->regbase->sr) & DW_SPI_SR_TF_NOT_FULL) && (spi->txcount > 0))
     {
-        *(volatile uint8_t *)(spi->regbase->dr) = (uint8_t)0x00;
+        *(volatile uint8_t *)(&spi->regbase->dr) = (uint8_t)0x00;
         spi->txcount--;
         // check if there is data to read (check status register for Read Fifo Not Empty)
         if((spi->regbase->sr) & DW_SPI_SR_RF_NOT_EMPT)
         {
-            data[inbyte] = *(volatile uint8_t *)(spi->regbase->dr);
+            data[inbyte] = *(volatile uint8_t *)(&spi->regbase->dr);
             inbyte++;
         }
     }
@@ -112,7 +141,7 @@ spi_status_t rp1_spi_read_8_n_blocking(rp1_spi_instance_t *spi, uint8_t *data, u
         // check if there is data to read (check status register for Read Fifo Not Empty)
         if((spi->regbase->sr) & DW_SPI_SR_RF_NOT_EMPT)
         {
-            data[inbyte] = *(volatile uint8_t *)(spi->regbase->dr);
+            data[inbyte] = *(volatile uint8_t *)(&spi->regbase->dr);
             inbyte++;
         }
     }

@@ -7,7 +7,6 @@ int alsa_pcm1822_init(alsa_pcm1822_t* handle)
 {
     snd_pcm_hw_params_t *hw_params;
     snd_pcm_sw_params_t *sw_params;
-    snd_pcm_format_t format = SND_PCM_FORMAT_S32_LE;
 
     int err;
     // open audio interface
@@ -32,24 +31,33 @@ int alsa_pcm1822_init(alsa_pcm1822_t* handle)
         return -4;
     }
 
-    if ((err = snd_pcm_hw_params_set_format(handle->capture_handle, hw_params, format)) < 0) {
+    if ((err = snd_pcm_hw_params_set_format(handle->capture_handle, hw_params, PCM_FORMAT)) < 0) {
         fprintf(stderr, "cannot set sample format (%s)\n", snd_strerror(err));
         return -5;
     }
-
-    if ((err = snd_pcm_hw_params_set_rate_near(handle->capture_handle, hw_params, &handle->sample_rate, 0)) < 0) {
+    if ((err = snd_pcm_hw_params_set_rate(handle->capture_handle, hw_params, handle->sample_rate, 0)) < 0) {
         fprintf(stderr, "cannot set sample rate (%s)\n", snd_strerror(err));
         return -6;
     }
 
-    if ((err = snd_pcm_hw_params_set_channels(handle->capture_handle, hw_params, 2)) < 0) {
+    if ((err = snd_pcm_hw_params_set_channels(handle->capture_handle, hw_params, NUM_CHANNELS)) < 0) {
         fprintf(stderr, "cannot set channel count (%s)\n", snd_strerror(err));
         return -7;
     }
 
+    if ((err = snd_pcm_hw_params_set_periods(handle->capture_handle, hw_params, 2, 0)) < 0) {
+        fprintf(stderr, "cannot set periods (%s)\n", snd_strerror(err));
+        return -8;
+    }
+
+    /*if ((err = snd_pcm_hw_params_set_buffer_size(handle->capture_handle, hw_params, handle->buffer_frames_num)) < 0) {
+        fprintf(stderr, "cannot set buffer size (%s)\n", snd_strerror(err));
+        return -9;
+    }*/
+
     if ((err = snd_pcm_hw_params(handle->capture_handle, hw_params)) < 0) {
         fprintf(stderr, "cannot set hw_params (%s)\n", snd_strerror(err));
-        return -8;
+        return -10;
     }
 
     snd_pcm_hw_params_free(hw_params);
@@ -57,27 +65,27 @@ int alsa_pcm1822_init(alsa_pcm1822_t* handle)
     // setup sw params
     if ((err = snd_pcm_sw_params_malloc(&sw_params)) < 0) {
         fprintf(stderr, "cannot allocate software parameter structure (%s)\n", snd_strerror(err));
-        return -9;
+        return -11;
     }
 
     if ((err = snd_pcm_sw_params_current(handle->capture_handle, sw_params)) < 0) {
         fprintf(stderr, "cannot initialize sw_params (%s)\n", snd_strerror(err));
-        return -10;
+        return -12;
     }
 
     if ((err = snd_pcm_sw_params_set_tstamp_mode(handle->capture_handle, sw_params, SND_PCM_TSTAMP_ENABLE)) < 0) {
         fprintf(stderr, "cannot set tstamp mode (%s)\n", snd_strerror(err));
-        return -11;
+        return -13;
     }
 
     if ((err = snd_pcm_sw_params_set_tstamp_type(handle->capture_handle, sw_params, SND_PCM_TSTAMP_TYPE_MONOTONIC)) < 0) {
         fprintf(stderr, "cannot set tstamp type (%s)\n", snd_strerror(err));
-        return -12;
+        return -14;
     }
 
     if ((err = snd_pcm_sw_params(handle->capture_handle, sw_params)) < 0) {
         fprintf(stderr, "cannot set sw_params (%s)\n", snd_strerror(err));
-        return -13;
+        return -15;
     }
 
     snd_pcm_sw_params_free(sw_params);
@@ -86,17 +94,17 @@ int alsa_pcm1822_init(alsa_pcm1822_t* handle)
     if ((err = snd_pcm_prepare(handle->capture_handle)) < 0)
     {
         fprintf(stderr, "cannot prepare audio interface for use (%s)\n", snd_strerror(err));
-        return -14;
+        return -16;
     }
 
     if ((err = snd_pcm_status_malloc(&handle->capture_status)) < 0)
     {
         fprintf(stderr, "cannot allocate status structure (%s)\n", snd_strerror(err));
-        return -15;
+        return -17;
     }
 
-    int buffer_bytes = handle->buffer_frames_num * (snd_pcm_format_width(format) / 8) * 2;
-    handle->buffer = (int32_t*) malloc(buffer_bytes);
+    handle->buffer_size = handle->buffer_frames_num * (snd_pcm_format_width(PCM_FORMAT) / 8) * NUM_CHANNELS;
+    handle->buffer = (int32_t*) malloc(handle->buffer_size);
 
     return 0;
 }

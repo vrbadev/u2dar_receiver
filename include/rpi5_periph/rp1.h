@@ -9,9 +9,9 @@
 
 // RP1 device memory
 #define RP1_BASE 0x1F00000000
-#define RP1_SPAN 0x0000400000
+#define RP1_SPAN 0x0004000000
 
-#define RP1_GET_ADDR(rp1, offset) (((uint64_t) (rp1).base_ptr) + (offset))
+#define RP1_GET_ADDR(rp1, offset) (((uint64_t) (rp1)->base_ptr) + (offset))
 #define BIT(pos) (1 << (pos))
 #define GENMASK(last_bit, first_bit) (((1 << ((last_bit) - (first_bit) + 1)) - 1) << (first_bit))
 
@@ -200,7 +200,7 @@ typedef struct {
     rp1_spi_t* spi8;
 } rp1_t;
 
-rp1_t rp1_init(void);
+int rp1_init(rp1_t* rp1);
 void rp1_deinit(rp1_t* rp1);
 
 // some auxiliary functions

@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "../rpi5_periph/rp1_spi.h"
+#include "../rpi5_periph/spi.h"
 
 
 #define MAX9939_SHDN (0x01 << 7)
@@ -132,7 +132,7 @@ const uint8_t max9939_offsets_bytes[] = {
     MAX9939_VOS_17_6MV
 };
 
-float max9939_set_gain(rp1_spi_instance_t* spi, float gain, bool shdn, bool meas);
-float max9939_set_offset(rp1_spi_instance_t* spi, float offset, bool shdn, bool meas);
+float max9939_set_gain(spi_handle_t* spi, float gain, bool shdn, bool meas);
+float max9939_set_offset(spi_handle_t* spi, float offset, bool shdn, bool meas);
 
 #endif

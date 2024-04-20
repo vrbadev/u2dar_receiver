@@ -2,8 +2,19 @@
 
 <group ns="u2dar_receiver">
 
+<arg name="i2c_dev" default="/dev/i2c-1" />
+<arg name="spi_dev" default="/dev/spidev0.0" />
+<arg name="alsa_dev" default="hw:2" />
+<arg name="pga_gain" default="1.0" />
+<arg name="pga_offset" default="0.0" />
+
 <node name="recorder_node" pkg="u2dar_receiver" type="recorder_node" output="screen" >
-    <param name="i2c_dev" type="str" value="/dev/i2c-1" />
+    <param name="i2c_dev" type="str" value="$(arg i2c_dev)" />
+    <param name="spi_dev" type="str" value="$(arg spi_dev)" />
+    <param name="alsa_dev" type="str" value="$(arg alsa_dev)" />
+
+    <param name="pga_gain" type="double" value="$(arg pga_gain)" />
+    <param name="pga_offset" type="double" value="$(arg pga_offset)" />
 </node>
 
 </group>

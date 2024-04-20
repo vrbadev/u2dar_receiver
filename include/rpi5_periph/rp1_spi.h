@@ -73,6 +73,8 @@ typedef enum {
 
 
 rp1_spi_instance_t rp1_spi_init(rp1_spi_t* regbase);
+void rp1_spi_set_freq(rp1_spi_instance_t* spi, uint32_t freq);
+void rp1_spi_set_mode(rp1_spi_instance_t* spi, uint32_t mode);
 spi_status_t rp1_spi_write_8_blocking(rp1_spi_instance_t *spi, uint8_t data);
 spi_status_t rp1_spi_read_8_n_blocking(rp1_spi_instance_t *spi, uint8_t *data, uint32_t len, uint32_t timeout);
 spi_status_t rp1_spi_read_32_n(rp1_spi_instance_t *spi, uint32_t *data, uint32_t len, uint32_t timeout);
