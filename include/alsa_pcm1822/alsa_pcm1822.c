@@ -1,10 +1,63 @@
 #include "alsa_pcm1822.h"
 
+/*
+ALSA hw ranges:
+    rate min: 8000
+    rate max: 384000
+    period time min: 10
+    period time max: 128000
+    period size min: 4
+    period size max: 1024
+    periods min: 2
+    periods max: 32768
+    buffer time min: 20
+    buffer time max: 16384000
+    buffer size min: 8
+    buffer size max: 131072
+*/
 
 static snd_pcm_audio_tstamp_config_t audio_tstamp_config = { .type_requested = 0, .report_delay = 0 };
 
+static pthread_t th;
+
+void* alsa_sync_thread(void* ptr) 
+{
+    alsa_pcm1822_t* handle = (alsa_pcm1822_t*) ptr;
+
+    uint32_t prev_state = rp1_sys_rio_in_get(handle->rp1_handle, handle->gpio_pcm_ws);
+    uint32_t curr_state;
+    uint32_t period = 2*handle->sample_rate;
+    uint32_t counter = 0;
+    while (1) {
+        if ((curr_state = (handle->rp1_handle, handle->gpio_pcm_ws)) != prev_state) {
+            if (counter == 0) {
+                timespec_get(&handle->stamp_sync, TIME_UTC);
+            }
+            if (counter % period == 0) {
+                rp1_sys_rio_out_xor(handle->rp1_handle, handle->gpio_sync);
+            } 
+            counter++;
+        }
+    }
+
+    return NULL;
+}
+
+
 int alsa_pcm1822_init(alsa_pcm1822_t* handle)
 {
+    // sync out as RIO
+    rp1_gpio_funcsel(handle->rp1_handle, handle->gpio_sync, 5);
+    rp1_sys_rio_config_output(handle->rp1_handle, handle->gpio_sync);
+    rp1_gpio_config_nopull(handle->rp1_handle, handle->gpio_sync);
+    
+    // sync in as RIO
+    rp1_gpio_config_input(handle->rp1_handle, handle->gpio_pcm_ws);
+    rp1_gpio_funcsel(handle->rp1_handle, handle->gpio_pcm_ws, 5);
+
+    rp1_sys_rio_out_clr(handle->rp1_handle, handle->gpio_sync);
+    pthread_create(&th, NULL, alsa_sync_thread, (void*) handle);
+
     snd_pcm_hw_params_t *hw_params;
     snd_pcm_sw_params_t *sw_params;
 
@@ -45,15 +98,26 @@ int alsa_pcm1822_init(alsa_pcm1822_t* handle)
         return -7;
     }
 
-    if ((err = snd_pcm_hw_params_set_periods(handle->capture_handle, hw_params, 2, 0)) < 0) {
+    if ((err = snd_pcm_hw_params_set_periods(handle->capture_handle, hw_params, 64, 0)) < 0) {
         fprintf(stderr, "[ERROR] cannot set periods (%s)\n", snd_strerror(err));
         return -8;
     }
 
-    /*if ((err = snd_pcm_hw_params_set_buffer_size(handle->capture_handle, hw_params, handle->buffer_frames_num)) < 0) {
+    snd_pcm_uframes_t period_size;
+    snd_pcm_hw_params_get_period_size_max(hw_params, &period_size, 0);
+    if ((err = snd_pcm_hw_params_set_period_size_last(handle->capture_handle, hw_params, &period_size, 0)) < 0) {
+        fprintf(stderr, "[ERROR] cannot set period size (%s)\n", snd_strerror(err));
+        return -8;
+    }
+    //fprintf(stderr, "[WARN] period size set to %u\n", period_size);
+
+    unsigned long buffer_size;
+    snd_pcm_hw_params_get_buffer_size_max(hw_params, &buffer_size);
+    if ((err = snd_pcm_hw_params_set_buffer_size_near(handle->capture_handle, hw_params, &buffer_size)) < 0) {
         fprintf(stderr, "[ERROR] cannot set buffer size (%s)\n", snd_strerror(err));
         return -9;
-    }*/
+    }
+    //fprintf(stderr, "[WARN] buffer size set to %u\n", buffer_size);
 
     if ((err = snd_pcm_hw_params(handle->capture_handle, hw_params)) < 0) {
         fprintf(stderr, "[ERROR] cannot set hw_params (%s)\n", snd_strerror(err));
@@ -90,21 +154,24 @@ int alsa_pcm1822_init(alsa_pcm1822_t* handle)
 
     snd_pcm_sw_params_free(sw_params);
 
+    if ((err = snd_pcm_status_malloc(&handle->capture_status)) < 0)
+    {
+        fprintf(stderr, "[ERROR] cannot allocate status structure (%s)\n", snd_strerror(err));
+        return -16;
+    }
+
     // prepare the interface
     if ((err = snd_pcm_prepare(handle->capture_handle)) < 0)
     {
         fprintf(stderr, "[ERROR] cannot prepare audio interface for use (%s)\n", snd_strerror(err));
-        return -16;
-    }
-
-    if ((err = snd_pcm_status_malloc(&handle->capture_status)) < 0)
-    {
-        fprintf(stderr, "[ERROR] cannot allocate status structure (%s)\n", snd_strerror(err));
         return -17;
     }
 
     handle->buffer_size = handle->buffer_frames_num * (snd_pcm_format_width(PCM_FORMAT) / 8) * NUM_CHANNELS;
     handle->buffer = (int32_t*) malloc(handle->buffer_size);
+
+    //void* ret;
+    //pthread_join(th, &ret);
 
     return 0;
 }
@@ -112,6 +179,9 @@ int alsa_pcm1822_init(alsa_pcm1822_t* handle)
 
 void alsa_pcm1822_deinit(alsa_pcm1822_t* handle)
 {
+    pthread_cancel(th);
+    rp1_sys_rio_out_clr(handle->rp1_handle, handle->gpio_sync);
+
     free(handle->buffer);
     snd_pcm_status_free(handle->capture_status);
     snd_pcm_close(handle->capture_handle);
@@ -124,7 +194,8 @@ int alsa_pcm1822_read(alsa_pcm1822_t* handle)
         //fprintf(stderr, "[ERROR] read from audio interface failed (%s)\n", snd_strerror(err));
         snd_pcm_recover(handle->capture_handle, err, 0);
         return -1;
-    }
+    } 
+    //rp1_sys_rio_out_xor(handle->rp1_handle, handle->gpio_sync);
 
     snd_pcm_status(handle->capture_handle, handle->capture_status);
     snd_pcm_status_set_audio_htstamp_config(handle->capture_status, &audio_tstamp_config);

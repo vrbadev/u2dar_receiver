@@ -1,0 +1,34 @@
+<launch>
+
+<group ns="u2dar_receiver">
+
+<arg name="i2c_dev" default="/dev/i2c-1" />
+<arg name="spi_dev" default="/dev/spidev0.0" />
+<arg name="alsa_dev" default="hw:0" />
+<arg name="pga_gain" default="1.0" />
+<arg name="pga_offset" default="0.0" />
+
+<!-- launch-prefix="debug_roslaunch" -->
+
+<node name="recorder_node" pkg="u2dar_receiver" type="recorder_node" output="screen" >
+    <param name="i2c_dev" type="str" value="$(arg i2c_dev)" /> 
+    <param name="spi_dev" type="str" value="$(arg spi_dev)" />
+    <param name="alsa_dev" type="str" value="$(arg alsa_dev)" />
+
+    <param name="pga_gain" type="double" value="$(arg pga_gain)" />
+    <param name="pga_offset" type="double" value="$(arg pga_offset)" />
+</node>
+
+<node pkg="nodelet" type="nodelet" name="evcam_node" args="standalone metavision_driver/DriverNodelet" clear_params="true" output="screen">
+    <param name="use_multithreading" value="false"/>
+    <param name="event_message_time_threshold" value="0.001"/>
+    <param name="trigger_message_time_threshold" value="0"/>
+    <param name="sync_mode" value="secondary"/>
+    <param name="trigger_in_mode" value="external"/>
+    <param name="statistics_print_interval" value="1.0"/>
+    <rosparam command="load" file="$(find metavision_driver)/config/trigger_pins.yaml"/>
+</node>
+
+</group>
+
+</launch>

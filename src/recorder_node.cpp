@@ -19,7 +19,8 @@ extern "C" {
 #define GPIO_PCM1822_MSZ 6
 #define GPIO_PCM1822_MD0 16
 #define GPIO_PCM1822_MD1 26
-
+#define GPIO_PCM1822_WS 23
+#define GPIO_SYNC_EVCAM 15
 
 #define NODE_NAME "[RecorderNode] "
 std::function<void(void)> shutdown_handler;
@@ -47,8 +48,8 @@ public:
             return;
         }
 
-        // GPIO15 as PWM0_CHAN3
-        rp1_gpio_funcsel(rp1_handle_, 15, 0);
+        rp1_pwm_chan_config(rp1_handle_->pwm0, 2, 1, 50, 0, 25);
+        rp1_pwm_chan_enable(rp1_handle_->pwm0, 2, 1);
 
         pub_audio_ = nh.advertise<u2dar_receiver_msgs::AudioPacket>("audio", 1);
 
@@ -120,6 +121,9 @@ public:
         alsa_handle_->dev_name = (const char*) alsa_dev_.c_str();
         alsa_handle_->sample_rate = 192000;
         alsa_handle_->buffer_frames_num = alsa_handle_->sample_rate / 100;
+        alsa_handle_->gpio_sync = GPIO_SYNC_EVCAM;
+        alsa_handle_->gpio_pcm_ws = GPIO_PCM1822_WS;
+        alsa_handle_->rp1_handle = rp1_handle_;
         if (alsa_pcm1822_init(alsa_handle_)) {
             ROS_ERROR(NODE_NAME "Failed to open ALSA recorder '%s'!", alsa_handle_->dev_name);
             return -1;
@@ -160,6 +164,7 @@ public:
 
             msg.stamp_trigger = ros::Time(alsa_handle_->hstamp_trigger.tv_sec, alsa_handle_->hstamp_trigger.tv_nsec);
             msg.stamp_audio = ros::Time(alsa_handle_->hstamp_audio.tv_sec, alsa_handle_->hstamp_audio.tv_nsec);
+            msg.stamp_sync = ros::Time(alsa_handle_->stamp_sync.tv_sec, alsa_handle_->stamp_sync.tv_nsec);
             msg.pga_gain = pga_gain_;
             msg.pga_offset = pga_offset_;
             msg.sample_rate = alsa_handle_->sample_rate;
@@ -169,12 +174,16 @@ public:
 
             /*msg.adc_ch0_data.clear();
             msg.adc_ch1_data.clear();*/
-            packet_id++;
-
-            if (packet_id % 100 == 0) {
-                ROS_INFO(NODE_NAME "Timestamp: %lu.%09lu", alsa_handle_->hstamp_audio.tv_sec, alsa_handle_->hstamp_audio.tv_nsec);
+            if (packet_id == 0) {
+                ROS_WARN(NODE_NAME "ALSA trigger: %lu.%09lu", alsa_handle_->hstamp_trigger.tv_sec, alsa_handle_->hstamp_trigger.tv_nsec);
+                ROS_WARN(NODE_NAME "Event cam trigger: %lu.%09lu", alsa_handle_->stamp_sync.tv_sec, alsa_handle_->stamp_sync.tv_nsec);
             }
 
+            if (packet_id % 100 == 0) {
+                ROS_INFO(NODE_NAME "Audio stamp: %lu.%09lu", alsa_handle_->hstamp_audio.tv_sec, alsa_handle_->hstamp_audio.tv_nsec);
+            }
+            
+            packet_id++;
             //fwrite(alsa_handle_->buffer, alsa_handle_->buffer_size, 1, output);
 
             /*double sum1 = 0;

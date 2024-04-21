@@ -64,6 +64,13 @@ void rp1_gpio_config_pulldown(rp1_t* rp1, uint32_t pin)
     rp1->gpio_pads_bank0->gpio[pin] |= BIT(2);
 }
 
+void rp1_gpio_config_nopull(rp1_t* rp1, uint32_t pin) 
+{
+    rp1->gpio_pads_bank0->gpio[pin] &= ~BIT(2);
+    rp1->gpio_pads_bank0->gpio[pin] &= ~BIT(3);
+}
+
+
 void rp1_gpio_config_input(rp1_t* rp1, uint32_t pin)
 {
     rp1->gpio_pads_bank0->gpio[pin] |= BIT(6);
