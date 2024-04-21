@@ -26,17 +26,20 @@ void* alsa_sync_thread(void* ptr)
 
     uint32_t prev_state = rp1_sys_rio_in_get(handle->rp1_handle, handle->gpio_pcm_ws);
     uint32_t curr_state;
-    uint32_t period = 2*handle->sample_rate;
-    uint32_t counter = 0;
+    uint64_t period = handle->sample_rate;
+    uint64_t counter = 0;
+    
     while (1) {
-        if ((curr_state = (handle->rp1_handle, handle->gpio_pcm_ws)) != prev_state) {
-            if (counter == 0) {
-                timespec_get(&handle->stamp_sync, TIME_UTC);
-            }
+        curr_state = rp1_sys_rio_in_get(handle->rp1_handle, handle->gpio_pcm_ws);
+        if (curr_state != prev_state) {
             if (counter % period == 0) {
                 rp1_sys_rio_out_xor(handle->rp1_handle, handle->gpio_sync);
             } 
+            if (counter == 0) {
+                timespec_get(&handle->stamp_sync, TIME_UTC);
+            }
             counter++;
+            prev_state = curr_state;
         }
     }
 
@@ -47,15 +50,15 @@ void* alsa_sync_thread(void* ptr)
 int alsa_pcm1822_init(alsa_pcm1822_t* handle)
 {
     // sync out as RIO
+    rp1_gpio_config_nopull(handle->rp1_handle, handle->gpio_sync);
     rp1_gpio_funcsel(handle->rp1_handle, handle->gpio_sync, 5);
     rp1_sys_rio_config_output(handle->rp1_handle, handle->gpio_sync);
-    rp1_gpio_config_nopull(handle->rp1_handle, handle->gpio_sync);
+    rp1_sys_rio_out_clr(handle->rp1_handle, handle->gpio_sync);
     
     // sync in as RIO
     rp1_gpio_config_input(handle->rp1_handle, handle->gpio_pcm_ws);
     rp1_gpio_funcsel(handle->rp1_handle, handle->gpio_pcm_ws, 5);
 
-    rp1_sys_rio_out_clr(handle->rp1_handle, handle->gpio_sync);
     pthread_create(&th, NULL, alsa_sync_thread, (void*) handle);
 
     snd_pcm_hw_params_t *hw_params;
@@ -98,7 +101,7 @@ int alsa_pcm1822_init(alsa_pcm1822_t* handle)
         return -7;
     }
 
-    if ((err = snd_pcm_hw_params_set_periods(handle->capture_handle, hw_params, 64, 0)) < 0) {
+    if ((err = snd_pcm_hw_params_set_periods(handle->capture_handle, hw_params, 4, 0)) < 0) {
         fprintf(stderr, "[ERROR] cannot set periods (%s)\n", snd_strerror(err));
         return -8;
     }

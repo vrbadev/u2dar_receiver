@@ -79,7 +79,10 @@ void rp1_gpio_config_input(rp1_t* rp1, uint32_t pin)
 void rp1_sys_rio_config_output(rp1_t* rp1, uint32_t pin)
 {
     rp1->gpio_pads_bank0->gpio[pin] &= ~BIT(6);
+    rp1->sys_rio0->oe = BIT(pin);
     rp1->sys_rio0_set->oe = BIT(pin);
+    rp1->sys_rio0_clr->oe = BIT(pin);
+    rp1->sys_rio0_xor->oe = BIT(pin);
 }
 
 void rp1_sys_rio_out_set(rp1_t* rp1, uint32_t pin)
