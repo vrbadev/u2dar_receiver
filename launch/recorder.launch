@@ -4,12 +4,14 @@
 
 <arg name="i2c_dev" default="/dev/i2c-1" />
 <arg name="spi_dev" default="/dev/spidev0.0" />
-<arg name="alsa_dev" default="hw:2" />
+<arg name="alsa_dev" default="hw:0" />
 <arg name="pga_gain" default="1.0" />
 <arg name="pga_offset" default="0.0" />
 
+<!-- launch-prefix="debug_roslaunch" -->
+
 <node name="recorder_node" pkg="u2dar_receiver" type="recorder_node" output="screen" >
-    <param name="i2c_dev" type="str" value="$(arg i2c_dev)" />
+    <param name="i2c_dev" type="str" value="$(arg i2c_dev)" /> 
     <param name="spi_dev" type="str" value="$(arg spi_dev)" />
     <param name="alsa_dev" type="str" value="$(arg alsa_dev)" />
 

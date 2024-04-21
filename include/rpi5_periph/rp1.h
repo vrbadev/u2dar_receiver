@@ -205,6 +205,9 @@ void rp1_deinit(rp1_t* rp1);
 
 // some auxiliary functions
 void rp1_gpio_funcsel(rp1_t* rp1, uint32_t pin, uint32_t altfun);
+void rp1_gpio_config_pullup(rp1_t* rp1, uint32_t pin);
+void rp1_gpio_config_pulldown(rp1_t* rp1, uint32_t pin);
+void rp1_gpio_config_input(rp1_t* rp1, uint32_t pin);
 
 void rp1_sys_rio_config_output(rp1_t* rp1, uint32_t pin);
 void rp1_sys_rio_out_set(rp1_t* rp1, uint32_t pin);

@@ -14,11 +14,12 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
   std_srvs
+  u2dar_receiver_msgs
 )
 
 catkin_package(
   INCLUDE_DIRS include
-  CATKIN_DEPENDS roscpp std_msgs std_srvs
+  CATKIN_DEPENDS roscpp std_msgs std_srvs u2dar_receiver_msgs
 )
 
 add_library(rpi5_periph include/rpi5_periph/rp1.c include/rpi5_periph/i2c.c include/rpi5_periph/spi.c)

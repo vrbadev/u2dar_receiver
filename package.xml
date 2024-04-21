@@ -13,5 +13,5 @@
   <depend>roscpp</depend>
   <depend>std_msgs</depend>
   <depend>std_srvs</depend>
-
+  <depend>u2dar_receiver_msgs</depend>
 </package>
