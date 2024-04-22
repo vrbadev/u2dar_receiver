@@ -120,7 +120,7 @@ public:
         alsa_handle_ = (alsa_pcm1822_t*) malloc(sizeof(alsa_pcm1822_t));
         alsa_handle_->dev_name = (const char*) alsa_dev_.c_str();
         alsa_handle_->sample_rate = 192000;
-        alsa_handle_->buffer_frames_num = alsa_handle_->sample_rate / 100;
+        alsa_handle_->buffer_frames_num = alsa_handle_->sample_rate;
         alsa_handle_->gpio_sync = GPIO_SYNC_EVCAM;
         alsa_handle_->gpio_pcm_ws = GPIO_PCM1822_WS;
         alsa_handle_->rp1_handle = rp1_handle_;
@@ -179,7 +179,7 @@ public:
                 ROS_WARN(NODE_NAME "Event cam trigger: %lu.%09lu", alsa_handle_->stamp_sync.tv_sec, alsa_handle_->stamp_sync.tv_nsec);
             }
 
-            if (packet_id % 100 == 0) {
+            if (packet_id % 1 == 0) {
                 ROS_INFO(NODE_NAME "Audio stamp: %lu.%09lu", alsa_handle_->hstamp_audio.tv_sec, alsa_handle_->hstamp_audio.tv_nsec);
             }
             
