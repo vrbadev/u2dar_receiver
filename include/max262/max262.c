@@ -27,9 +27,18 @@ int max262_init(max262_t* handle)
     rp1_gpio_funcsel(handle->rp1_handle, handle->gpio_nwr, 5);
     rp1_sys_rio_config_output(handle->rp1_handle, handle->gpio_nwr);
     rp1_sys_rio_out_set(handle->rp1_handle, handle->gpio_nwr);
+
+    // set PWM0_CH0 to 1.5MHz (PWM0 runs at 30MHz)
+    rp1_pwm_chan_config(handle->rp1_handle->pwm0, 0, 1, 20, 0, 10);
+    rp1_pwm_chan_enable(handle->rp1_handle->pwm0, 0, 1);
+
+    // set PWM0_CH1 to 1.5MHz (PWM0 runs at 30MHz)
+    rp1_pwm_chan_config(handle->rp1_handle->pwm0, 1, 1, 20, 0, 10);
+    rp1_pwm_chan_enable(handle->rp1_handle->pwm0, 1, 1);
 }
 
 void max262_deinit(max262_t* handle)
 {
-
+    rp1_pwm_chan_enable(handle->rp1_handle->pwm0, 0, 0);
+    rp1_pwm_chan_enable(handle->rp1_handle->pwm0, 1, 0);
 }

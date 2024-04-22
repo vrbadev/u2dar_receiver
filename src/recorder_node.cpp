@@ -60,7 +60,8 @@ public:
             return;
         }
 
-        rp1_pwm_chan_config(rp1_handle_->pwm0, 2, 1, 50, 0, 25);
+        // set PWM0_CH2 to 1MHz (PWM0 runs at 30MHz)
+        rp1_pwm_chan_config(rp1_handle_->pwm0, 2, 1, 30, 0, 15);
         rp1_pwm_chan_enable(rp1_handle_->pwm0, 2, 1);
 
         pub_audio_ = nh.advertise<u2dar_receiver_msgs::AudioPacket>("audio", 1);
@@ -77,6 +78,8 @@ public:
 
             alsa_pcm1822_deinit(alsa_handle_);
             free(alsa_handle_);
+
+            rp1_pwm_chan_enable(rp1_handle_->pwm0, 2, 0);
 
             max262_deinit(max262_handle_);
             free(max262_handle_);
