@@ -79,25 +79,25 @@ void rp1_gpio_config_input(rp1_t* rp1, uint32_t pin)
 void rp1_sys_rio_config_output(rp1_t* rp1, uint32_t pin)
 {
     rp1->gpio_pads_bank0->gpio[pin] &= ~BIT(6);
-    rp1->sys_rio0->oe = BIT(pin);
-    rp1->sys_rio0_set->oe = BIT(pin);
-    rp1->sys_rio0_clr->oe = BIT(pin);
-    rp1->sys_rio0_xor->oe = BIT(pin);
+    rp1->sys_rio0->oe |= BIT(pin);
+    rp1->sys_rio0_set->oe |= BIT(pin);
+    rp1->sys_rio0_clr->oe |= BIT(pin);
+    rp1->sys_rio0_xor->oe |= BIT(pin);
 }
 
 void rp1_sys_rio_out_set(rp1_t* rp1, uint32_t pin)
 {
-    rp1->sys_rio0_set->out = BIT(pin);
+    rp1->sys_rio0_set->out |= BIT(pin);
 }
 
 void rp1_sys_rio_out_xor(rp1_t* rp1, uint32_t pin)
 {
-    rp1->sys_rio0_xor->out = BIT(pin);
+    rp1->sys_rio0_xor->out |= BIT(pin);
 }
 
 void rp1_sys_rio_out_clr(rp1_t* rp1, uint32_t pin)
 {
-    rp1->sys_rio0_clr->out = BIT(pin);
+    rp1->sys_rio0_clr->out |= BIT(pin);
 }
 
 uint32_t rp1_sys_rio_in_get(rp1_t* rp1, uint32_t pin)
@@ -117,7 +117,7 @@ void rp1_pwm_chan_enable(rp1_pwm_t* pwm, uint32_t ch, uint32_t en)
 
 void rp1_pwm_chan_config(rp1_pwm_t* pwm, uint32_t ch, uint32_t mode, uint32_t range, uint32_t phase, uint32_t duty)
 {
-    pwm->chan[ch].ctrl = mode;
+    pwm->chan[ch].ctrl |= mode;
     pwm->chan[ch].range = range;
     pwm->chan[ch].phase = phase;
     pwm->chan[ch].duty = duty;

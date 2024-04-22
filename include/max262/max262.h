@@ -8,6 +8,7 @@ typedef struct {
     rp1_t* rp1_handle;
     uint32_t gpios_a[4];
     uint32_t gpios_d[2];
+    uint32_t gpio_nwr;
     uint32_t gpios_clk[2];
 } max262_t;
 

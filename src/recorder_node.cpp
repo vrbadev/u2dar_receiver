@@ -31,6 +31,7 @@ extern "C" {
 #define GPIO_MAX262_D1 0
 #define GPIO_MAX262_CLKA 12
 #define GPIO_MAX262_CLKB 13
+#define GPIO_MAX262_NWR 27
 
 
 #define NODE_NAME "[RecorderNode] "
@@ -152,6 +153,7 @@ public:
         max262_handle_->gpios_a[3] = GPIO_MAX262_A3;
         max262_handle_->gpios_d[0] = GPIO_MAX262_D0;
         max262_handle_->gpios_d[1] = GPIO_MAX262_D1;
+        max262_handle_->gpio_nwr = GPIO_MAX262_NWR;
         max262_handle_->gpios_clk[0] = GPIO_MAX262_CLKA;
         max262_handle_->gpios_clk[1] = GPIO_MAX262_CLKB;
         max262_handle_->rp1_handle = rp1_handle_;

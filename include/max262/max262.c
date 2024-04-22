@@ -9,14 +9,12 @@ int max262_init(max262_t* handle)
 {
     for (uint32_t i = 0; i < 4; i++) {
         rp1_gpio_funcsel(handle->rp1_handle, handle->gpios_a[i], 5);
-        rp1_gpio_config_pulldown(handle->rp1_handle, handle->gpios_a[i]);
         rp1_sys_rio_config_output(handle->rp1_handle, handle->gpios_a[i]);
         rp1_sys_rio_out_clr(handle->rp1_handle, handle->gpios_a[i]);
     }
 
     for (uint32_t i = 0; i < 2; i++) {
         rp1_gpio_funcsel(handle->rp1_handle, handle->gpios_d[i], 5);
-        rp1_gpio_config_pulldown(handle->rp1_handle, handle->gpios_d[i]);
         rp1_sys_rio_config_output(handle->rp1_handle, handle->gpios_d[i]);
         rp1_sys_rio_out_clr(handle->rp1_handle, handle->gpios_d[i]);
     }
@@ -25,6 +23,10 @@ int max262_init(max262_t* handle)
         rp1_gpio_funcsel(handle->rp1_handle, handle->gpios_clk[i], 0);
         rp1_gpio_config_nopull(handle->rp1_handle, handle->gpios_clk[i]);
     }
+
+    rp1_gpio_funcsel(handle->rp1_handle, handle->gpio_nwr, 5);
+    rp1_sys_rio_config_output(handle->rp1_handle, handle->gpio_nwr);
+    rp1_sys_rio_out_set(handle->rp1_handle, handle->gpio_nwr);
 }
 
 void max262_deinit(max262_t* handle)
