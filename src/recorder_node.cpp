@@ -11,6 +11,7 @@ extern "C" {
 #include "rpi5_periph/i2c.h"
 #include "rpi5_periph/spi.h"
 #include "max9939/max9939.h"
+#include "max262/max262.h"
 #include "alsa_pcm1822/alsa_pcm1822.h"
 }
 
@@ -21,6 +22,16 @@ extern "C" {
 #define GPIO_PCM1822_MD1 26
 #define GPIO_PCM1822_WS 23
 #define GPIO_SYNC_EVCAM 15
+
+#define GPIO_MAX262_A0 1 
+#define GPIO_MAX262_A1 7
+#define GPIO_MAX262_A2 25
+#define GPIO_MAX262_A3 24
+#define GPIO_MAX262_D0 22 
+#define GPIO_MAX262_D1 0
+#define GPIO_MAX262_CLKA 12
+#define GPIO_MAX262_CLKB 13
+
 
 #define NODE_NAME "[RecorderNode] "
 std::function<void(void)> shutdown_handler;
@@ -33,7 +44,7 @@ public:
         nh.param<std::string>("i2c_dev", i2c_dev_, "/dev/i2c-1");
         nh.param<std::string>("spi_dev", spi_dev_, "/dev/spidev0.0");
         nh.param<std::string>("alsa_dev", alsa_dev_, "hw:0");
-        nh.param<double>("pga_gain", pga_gain_, (double) 1.0f);
+        nh.param<double>("pga_gain", pga_gain_, (double) 10.0f);
         nh.param<double>("pga_offset", pga_offset_, (double) 0.0f);
 
         // setup I2C for sensors
@@ -66,6 +77,9 @@ public:
             alsa_pcm1822_deinit(alsa_handle_);
             free(alsa_handle_);
 
+            max262_deinit(max262_handle_);
+            free(max262_handle_);
+
             i2c_deinit(i2c_handle_);
             free(i2c_handle_);
 
@@ -85,11 +99,12 @@ public:
         spi_handle_ = (spi_handle_t*) malloc(sizeof(spi_handle_t));
         spi_handle_->dev_path = (const char*) spi_dev_.c_str();
         spi_init(spi_handle_);
-        spi_set_mode(spi_handle_, SPI_MODE_3 | SPI_CS_WORD);
+        spi_set_mode(spi_handle_, SPI_MODE_0 | SPI_CS_HIGH);
         spi_set_bits_per_word(spi_handle_, 8);
         spi_set_speed(spi_handle_, 1000000);
 
         // set PGA gain and offset
+        ROS_WARN(NODE_NAME "Writing PGA gain=%.2fx, offset=%.2fmV", pga_gain_, pga_offset_);
         max9939_set_offset(spi_handle_, pga_offset_, false, false);
         max9939_set_gain(spi_handle_, pga_gain_, false, false);
 
@@ -128,6 +143,19 @@ public:
             ROS_ERROR(NODE_NAME "Failed to open ALSA recorder '%s'!", alsa_handle_->dev_name);
             return -1;
         }
+
+        // setup switched cap filter MAX262
+        max262_handle_ = (max262_t*) malloc(sizeof(max262_t));
+        max262_handle_->gpios_a[0] = GPIO_MAX262_A0;
+        max262_handle_->gpios_a[1] = GPIO_MAX262_A1;
+        max262_handle_->gpios_a[2] = GPIO_MAX262_A2;
+        max262_handle_->gpios_a[3] = GPIO_MAX262_A3;
+        max262_handle_->gpios_d[0] = GPIO_MAX262_D0;
+        max262_handle_->gpios_d[1] = GPIO_MAX262_D1;
+        max262_handle_->gpios_clk[0] = GPIO_MAX262_CLKA;
+        max262_handle_->gpios_clk[1] = GPIO_MAX262_CLKB;
+        max262_handle_->rp1_handle = rp1_handle_;
+        max262_init(max262_handle_);
 
         return 0;
     }
@@ -186,13 +214,13 @@ public:
             packet_id++;
             //fwrite(alsa_handle_->buffer, alsa_handle_->buffer_size, 1, output);
 
-            /*double sum1 = 0;
+            double sum1 = 0;
             double sum2 = 0;
             for (uint32_t i = 0; i < alsa_handle_->buffer_frames_num; i++) {
                 sum1 += abs(alsa_handle_->buffer[2*i]);
                 sum2 += abs(alsa_handle_->buffer[2*i+1]);
             }
-            ROS_INFO(NODE_NAME "CH2/CH1 sums ratio: %f", sum2 / sum1);*/
+            ROS_INFO(NODE_NAME "CH2/CH1 sums ratio: %f", sum2 / sum1);
 
             //ROS_INFO(NODE_NAME "Read done.");
 
@@ -216,6 +244,7 @@ private:
     rp1_t* rp1_handle_;
     spi_handle_t* spi_handle_;
     alsa_pcm1822_t* alsa_handle_;
+    max262_t* max262_handle_;
 
     ros::Publisher pub_audio_;
 };

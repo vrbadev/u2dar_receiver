@@ -5,7 +5,7 @@
 <arg name="i2c_dev" default="/dev/i2c-1" />
 <arg name="spi_dev" default="/dev/spidev0.0" />
 <arg name="alsa_dev" default="hw:0" />
-<arg name="pga_gain" default="1.0" />
+<arg name="pga_gain" default="10.0" />
 <arg name="pga_offset" default="0.0" />
 
 <!-- launch-prefix="debug_roslaunch" -->
@@ -26,6 +26,7 @@
     <param name="sync_mode" value="secondary"/>
     <param name="trigger_in_mode" value="external"/>
     <param name="statistics_print_interval" value="1.0"/>
+    <param name="bias_file" value="$(find u2dar_receiver)/config/recording_2024-04-22_19-08-00.bias" />
     <rosparam command="load" file="$(find metavision_driver)/config/trigger_pins.yaml"/>
 </node>
 

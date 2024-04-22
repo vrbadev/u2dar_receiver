@@ -80,7 +80,7 @@ int spi_write(spi_handle_t* spi_handle, unsigned char* data, unsigned int len)
     tr.tx_buf = (unsigned long) data;
     tr.len = len;
     tr.cs_change = 1;
-    tr.delay_usecs = 1000;
+    tr.delay_usecs = 0;
 
 	if (ioctl(spi_handle->handle, SPI_IOC_MESSAGE(1), &tr) < 0) {
 		fprintf(stderr, "Failed to write SPI data.\r\n");
@@ -101,7 +101,7 @@ int spi_read(spi_handle_t* spi_handle, unsigned char* data, unsigned int len)
     tr.rx_buf = (unsigned long) data;
     tr.len = len;
     tr.cs_change = 1;
-    tr.delay_usecs = 1000;
+    tr.delay_usecs = 0;
 
 	if (ioctl(spi_handle->handle, SPI_IOC_MESSAGE(1), &tr) < 0) {
 		fprintf(stderr, "Failed to read SPI data.\r\n");
