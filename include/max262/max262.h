@@ -10,6 +10,12 @@ typedef struct {
     uint32_t gpios_d[2];
     uint32_t gpio_nwr;
     uint32_t gpios_clk[2];
+    double swcf_a_f0;
+    double swcf_a_q;
+    int swcf_a_mode;
+    double swcf_b_f0;
+    double swcf_b_q;
+    int swcf_b_mode;
 } max262_t;
 
 int max262_init(max262_t* handle);

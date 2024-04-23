@@ -139,19 +139,25 @@ int max262_init(max262_t* handle)
     rp1_pwm_chan_config(handle->rp1_handle->pwm0, 1, 1, 20, 0, 10);
     rp1_pwm_chan_enable(handle->rp1_handle->pwm0, 1, 1);
 
-    double f0 = 20e3;
-    double Q = 10.0;
-    uint8_t mode = 1;
-    max262_config_t conf = max262_closest_conf(1.5e6, f0, Q, mode);
+    max262_config_t conf_a = max262_closest_conf(1.5e6, handle->swcf_a_f0, handle->swcf_a_q, handle->swcf_a_mode);
+    max262_config_t conf_b = max262_closest_conf(1.5e6, handle->swcf_b_f0, handle->swcf_b_q, handle->swcf_b_mode);
 
-    if (conf.N_F == 0xFF) {
-        fprintf(stderr, "[WARN] Failed to set MAX262 N value for mode %d and center freq = %f\n", mode, f0);
-    } else if (conf.N_Q == 0xFF) {
-        fprintf(stderr, "[WARN] Failed to set MAX262 N value for mode %d and Q = %f\n", mode, Q);
+    if (conf_a.N_F == 0xFF) {
+        fprintf(stderr, "[WARN] Failed to set MAX262 (ch A) N value for mode %d and center freq = %f\n", handle->swcf_a_mode, handle->swcf_a_f0);
+    } else if (conf_a.N_Q == 0xFF) {
+        fprintf(stderr, "[WARN] Failed to set MAX262 (ch A) N value for mode %d and Q = %f\n", handle->swcf_a_mode, handle->swcf_a_q);
     } else {
-        max262_set_conf(handle, &conf, 0);
-        max262_set_conf(handle, &conf, 1);
-        fprintf(stderr, "[WARN] MAX262 configured for mode %d: f0 = %f Hz, Q = %f\n", mode, f0, Q);
+        max262_set_conf(handle, &conf_a, 0);
+        fprintf(stderr, "[WARN] MAX262 (ch A) configured for mode %d: f0 = %f Hz, Q = %f\n", handle->swcf_a_mode, handle->swcf_a_f0, handle->swcf_a_q);
+    }
+
+    if (conf_b.N_F == 0xFF) {
+        fprintf(stderr, "[WARN] Failed to set MAX262 (ch B) N value for mode %d and center freq = %f\n", handle->swcf_b_mode, handle->swcf_b_f0);
+    } else if (conf_b.N_Q == 0xFF) {
+        fprintf(stderr, "[WARN] Failed to set MAX262 (ch B) N value for mode %d and Q = %f\n", handle->swcf_b_mode, handle->swcf_b_q);
+    } else {
+        max262_set_conf(handle, &conf_b, 1);
+        fprintf(stderr, "[WARN] MAX262 (ch B) configured for mode %d: f0 = %f Hz, Q = %f\n", handle->swcf_b_mode, handle->swcf_b_f0, handle->swcf_b_q);
     }
 }
 

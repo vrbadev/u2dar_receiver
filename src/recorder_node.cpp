@@ -4,6 +4,7 @@
 #include <time.h>
 
 #include <u2dar_receiver_msgs/AudioPacket.h>
+#include <u2dar_receiver_msgs/EnvironmentPacket.h>
 #include <std_srvs/SetBool.h>
 
 extern "C" {
@@ -13,6 +14,8 @@ extern "C" {
 #include "max9939/max9939.h"
 #include "max262/max262.h"
 #include "alsa_pcm1822/alsa_pcm1822.h"
+#include "sensors/aht20.h"
+#include "sensors/bmp280.h"
 }
 
 #define abs(x) ((x) < 0 ? -(x) : (x))
@@ -47,6 +50,12 @@ public:
         nh.param<std::string>("alsa_dev", alsa_dev_, "hw:0");
         nh.param<double>("pga_gain", pga_gain_, (double) 10.0f);
         nh.param<double>("pga_offset", pga_offset_, (double) 0.0f);
+        nh.param<double>("swcf_a_f0", swcf_a_f0_, (double) 20e3);
+        nh.param<double>("swcf_a_q", swcf_a_q_, (double) 1.0f);
+        nh.param<int>("swcf_a_mode", swcf_a_mode_, 1);
+        nh.param<double>("swcf_b_f0", swcf_b_f0_, (double) 20e3);
+        nh.param<double>("swcf_b_q", swcf_b_q_, (double) 1.0f);
+        nh.param<int>("swcf_b_mode", swcf_b_mode_, 1);
 
         // setup I2C for sensors
         i2c_handle_ = (i2c_handle_t*) malloc(sizeof(i2c_handle_t));
@@ -55,6 +64,15 @@ public:
             ROS_ERROR(NODE_NAME "Failed to open I2C device '%s'!", i2c_handle_->dev_path);
             return;
         }
+
+        aht20_handle_ = (aht20_t*) malloc(sizeof(aht20_t));
+        aht20_handle_->i2c_handle = i2c_handle_;
+        aht20_init(aht20_handle_);
+        aht20_trigger(aht20_handle_);
+
+        bmp280_handle_ = (bmp280_t*) malloc(sizeof(bmp280_t));
+        bmp280_handle_->i2c_handle = i2c_handle_;
+        bmp280_init(bmp280_handle_);
 
         if (setup_audio()) {
             return;
@@ -65,6 +83,7 @@ public:
         rp1_pwm_chan_enable(rp1_handle_->pwm0, 2, 1);
 
         pub_audio_ = nh.advertise<u2dar_receiver_msgs::AudioPacket>("audio", 1);
+        pub_env_ = nh.advertise<u2dar_receiver_msgs::EnvironmentPacket>("env", 1);
 
         initialized_ = true;
         shutdown_handler = [&]() { this->~RecorderNode(); };
@@ -86,6 +105,8 @@ public:
 
             i2c_deinit(i2c_handle_);
             free(i2c_handle_);
+            free(aht20_handle_);
+            free(bmp280_handle_);
 
             spi_deinit(spi_handle_);
             free(spi_handle_);
@@ -150,6 +171,7 @@ public:
 
         // setup switched cap filter MAX262
         max262_handle_ = (max262_t*) malloc(sizeof(max262_t));
+        max262_handle_->rp1_handle = rp1_handle_;
         max262_handle_->gpios_a[0] = GPIO_MAX262_A0;
         max262_handle_->gpios_a[1] = GPIO_MAX262_A1;
         max262_handle_->gpios_a[2] = GPIO_MAX262_A2;
@@ -159,7 +181,12 @@ public:
         max262_handle_->gpio_nwr = GPIO_MAX262_NWR;
         max262_handle_->gpios_clk[0] = GPIO_MAX262_CLKA;
         max262_handle_->gpios_clk[1] = GPIO_MAX262_CLKB;
-        max262_handle_->rp1_handle = rp1_handle_;
+        max262_handle_->swcf_a_f0 = swcf_a_f0_;
+        max262_handle_->swcf_a_q = swcf_a_q_;
+        max262_handle_->swcf_a_mode = swcf_a_mode_;
+        max262_handle_->swcf_b_f0 = swcf_b_f0_;
+        max262_handle_->swcf_b_q = swcf_b_q_;
+        max262_handle_->swcf_b_mode = swcf_b_mode_;
         max262_init(max262_handle_);
 
         return 0;
@@ -170,13 +197,14 @@ public:
 
         ROS_INFO(NODE_NAME "Running recorder node...");
 
-        u2dar_receiver_msgs::AudioPacket msg;
+        u2dar_receiver_msgs::AudioPacket msg_audio;
+        u2dar_receiver_msgs::EnvironmentPacket msg_env;
         //FILE *output = fopen("/home/pi/raw_i32.bin", "wb");
 
         uint32_t total_frames = alsa_handle_->buffer_frames_num * 2;
-        //msg.adc_data = std::vector<int32_t>(total_frames);
-        /*msg.adc_ch0_data.clear();
-        msg.adc_ch1_data.clear();*/
+        //msg_audio.adc_data = std::vector<int32_t>(total_frames);
+        /*msg_audio.adc_ch0_data.clear();
+        msg_audio.adc_ch1_data.clear();*/
 
         uint32_t packet_id = 0;
         ros::Rate rate(100);
@@ -187,23 +215,23 @@ public:
                 continue;
             }
             
-            msg.adc_data.assign(alsa_handle_->buffer, alsa_handle_->buffer + total_frames);
-            /*memcpy(&msg.adc_data[0], alsa_handle_->buffer, alsa_handle_->buffer_size);*/
+            msg_audio.adc_data.assign(alsa_handle_->buffer, alsa_handle_->buffer + total_frames);
+            /*memcpy(&msg_audio.adc_data[0], alsa_handle_->buffer, alsa_handle_->buffer_size);*/
 
             /*for (uint32_t i = 0; i < alsa_handle_->buffer_frames_num; i++) {
-                msg.adc_ch0_data.push_back(alsa_handle_->buffer[2*i]);
-                msg.adc_ch1_data.push_back(alsa_handle_->buffer[2*i+1]);
+                msg_audio.adc_ch0_data.push_back(alsa_handle_->buffer[2*i]);
+                msg_audio.adc_ch1_data.push_back(alsa_handle_->buffer[2*i+1]);
             }*/
 
-            msg.stamp_trigger = ros::Time(alsa_handle_->hstamp_trigger.tv_sec, alsa_handle_->hstamp_trigger.tv_nsec);
-            msg.stamp_audio = ros::Time(alsa_handle_->hstamp_audio.tv_sec, alsa_handle_->hstamp_audio.tv_nsec);
-            msg.stamp_sync = ros::Time(alsa_handle_->stamp_sync.tv_sec, alsa_handle_->stamp_sync.tv_nsec);
-            msg.pga_gain = pga_gain_;
-            msg.pga_offset = pga_offset_;
-            msg.sample_rate = alsa_handle_->sample_rate;
-            msg.packet_id = packet_id;
-            msg.stamp_pub = ros::Time::now();
-            pub_audio_.publish(msg);
+            msg_audio.stamp_trigger = ros::Time(alsa_handle_->hstamp_trigger.tv_sec, alsa_handle_->hstamp_trigger.tv_nsec);
+            msg_audio.stamp_audio = ros::Time(alsa_handle_->hstamp_audio.tv_sec, alsa_handle_->hstamp_audio.tv_nsec);
+            msg_audio.stamp_sync = ros::Time(alsa_handle_->stamp_sync.tv_sec, alsa_handle_->stamp_sync.tv_nsec);
+            msg_audio.pga_gain = pga_gain_;
+            msg_audio.pga_offset = pga_offset_;
+            msg_audio.sample_rate = alsa_handle_->sample_rate;
+            msg_audio.packet_id = packet_id;
+            msg_audio.stamp_pub = ros::Time::now();
+            pub_audio_.publish(msg_audio);
 
             /*msg.adc_ch0_data.clear();
             msg.adc_ch1_data.clear();*/
@@ -219,13 +247,24 @@ public:
             packet_id++;
             //fwrite(alsa_handle_->buffer, alsa_handle_->buffer_size, 1, output);
 
-            double sum1 = 0;
+            /*double sum1 = 0;
             double sum2 = 0;
             for (uint32_t i = 0; i < alsa_handle_->buffer_frames_num; i++) {
                 sum1 += abs(alsa_handle_->buffer[2*i]);
                 sum2 += abs(alsa_handle_->buffer[2*i+1]);
             }
-            ROS_INFO(NODE_NAME "CH2/CH1 sums ratio: %f", sum2 / sum1);
+            ROS_INFO(NODE_NAME "CH2/CH1 sums ratio: %f", sum2 / sum1);*/
+
+            aht20_read(aht20_handle_);
+            aht20_trigger(aht20_handle_);
+            bmp280_read_all(bmp280_handle_);
+            ROS_INFO(NODE_NAME "AHT20: t=%.2f C, RH=%.2f %%; BMP280: t=%.2f C, %.1f Pa", aht20_handle_->temp, aht20_handle_->hum, bmp280_handle_->temp, bmp280_handle_->pres);
+            msg_env.stamp_pub = ros::Time::now();
+            msg_env.bmp_temp = bmp280_handle_->temp;
+            msg_env.bmp_pres = bmp280_handle_->pres;
+            msg_env.aht_temp = aht20_handle_->temp;
+            msg_env.aht_hum = aht20_handle_->hum;
+            pub_env_.publish(msg_env);
 
             //ROS_INFO(NODE_NAME "Read done.");
 
@@ -244,14 +283,23 @@ private:
     std::string alsa_dev_;
     double pga_gain_;
     double pga_offset_;
+    double swcf_a_f0_;
+    double swcf_a_q_;
+    int swcf_a_mode_;
+    double swcf_b_f0_;
+    double swcf_b_q_;
+    int swcf_b_mode_;
     
     i2c_handle_t* i2c_handle_;
     rp1_t* rp1_handle_;
     spi_handle_t* spi_handle_;
     alsa_pcm1822_t* alsa_handle_;
     max262_t* max262_handle_;
+    aht20_t* aht20_handle_;
+    bmp280_t* bmp280_handle_;
 
     ros::Publisher pub_audio_;
+    ros::Publisher pub_env_;
 };
 
 int32_t main(int32_t argc, char** argv) {

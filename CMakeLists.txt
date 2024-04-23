@@ -26,6 +26,7 @@ add_library(rpi5_periph include/rpi5_periph/rp1.c include/rpi5_periph/i2c.c incl
 add_library(max9939 include/max9939/max9939.c)
 add_library(max262 include/max262/max262.c)
 add_library(alsa_pcm1822 include/alsa_pcm1822/alsa_pcm1822.c)
+add_library(sensors include/sensors/aht20.c include/sensors/bmp280.c)
 
 include_directories(
   include
@@ -34,7 +35,7 @@ include_directories(
 
 add_executable(recorder_node src/recorder_node.cpp)
 
-target_link_libraries(recorder_node ${catkin_LIBRARIES} rpi5_periph max9939 max262 alsa_pcm1822 asound m pthread)
+target_link_libraries(recorder_node ${catkin_LIBRARIES} rpi5_periph sensors max9939 max262 alsa_pcm1822 asound m pthread)
 
 install(TARGETS recorder_node
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}

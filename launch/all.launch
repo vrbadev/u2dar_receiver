@@ -5,8 +5,14 @@
 <arg name="i2c_dev" default="/dev/i2c-1" />
 <arg name="spi_dev" default="/dev/spidev0.0" />
 <arg name="alsa_dev" default="hw:0" />
-<arg name="pga_gain" default="10.0" />
+<arg name="pga_gain" default="157.0" />
 <arg name="pga_offset" default="0.0" />
+<arg name="swcf_a_f0" default="20000.0" />
+<arg name="swcf_a_q" default="1.0" />
+<arg name="swcf_a_mode" default="1" />
+<arg name="swcf_b_f0" default="20000.0" />
+<arg name="swcf_b_q" default="1.0" />
+<arg name="swcf_b_mode" default="1" />
 
 <!-- launch-prefix="debug_roslaunch" -->
 
@@ -17,6 +23,13 @@
 
     <param name="pga_gain" type="double" value="$(arg pga_gain)" />
     <param name="pga_offset" type="double" value="$(arg pga_offset)" />
+
+    <param name="swcf_a_f0" type="double" value="$(arg swcf_a_f0)" />
+    <param name="swcf_a_q" type="double" value="$(arg swcf_a_q)" />
+    <param name="swcf_a_mode" type="int" value="$(arg swcf_a_mode)" />
+    <param name="swcf_b_f0" type="double" value="$(arg swcf_b_f0)" />
+    <param name="swcf_b_q" type="double" value="$(arg swcf_b_q)" />
+    <param name="swcf_b_mode" type="int" value="$(arg swcf_b_mode)" />
 </node>
 
 <node pkg="nodelet" type="nodelet" name="evcam_node" args="standalone metavision_driver/DriverNodelet" clear_params="true" output="screen">

@@ -101,7 +101,7 @@ int alsa_pcm1822_init(alsa_pcm1822_t* handle)
         return -7;
     }
 
-    if ((err = snd_pcm_hw_params_set_periods(handle->capture_handle, hw_params, 4, 0)) < 0) {
+    if ((err = snd_pcm_hw_params_set_periods(handle->capture_handle, hw_params, 8, 0)) < 0) {
         fprintf(stderr, "[ERROR] cannot set periods (%s)\n", snd_strerror(err));
         return -8;
     }
